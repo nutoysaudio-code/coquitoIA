@@ -37,18 +37,14 @@ def stable_uuid(value):
         return str(uuid.uuid4())
 
 
-def main():
-    p = argparse.ArgumentParser()
-    p.add_argument("--input", required=True, help="JSON con filas de agent_experiences")
-    p.add_argument("--out", default=str(Path(__file__).resolve().parent.parent))
-    p.add_argument("--force", action="store_true")
-    a = p.parse_args()
+def build_records(rows, taken_ids=None):
+    """Convierte filas de agent_experiences a registros del formato del repo.
 
-    rows = json.loads(Path(a.input).read_text(encoding="utf-8-sig"))
-    if not isinstance(rows, list):
-        raise SystemExit("El input debe ser una lista de filas")
-
-    seen, records = {}, []
+    `taken_ids` son los `id` que ya viven en memories.jsonl: un registro nuevo
+    cuyo slug choque recibe el sufijo -2, -3... (el sid es el que identifica).
+    """
+    seen = {rid: True for rid in (taken_ids or ())}
+    records = []
     for r in rows:
         d = ascii_slug(flat(r.get("domain")) or "general", 40)
         t = flat(r.get("title")) or "Sin titulo"
@@ -80,10 +76,47 @@ def main():
         records.append(rec)
 
     records.sort(key=lambda x: (x["d"], x["k"], x["id"]))
+    return records
+
+
+def read_existing(mem):
+    if not mem.exists():
+        return []
+    items = []
+    for line in mem.read_text(encoding="utf-8").splitlines():
+        if line.strip():
+            items.append(json.loads(line))
+    return items
+
+
+def main():
+    p = argparse.ArgumentParser()
+    p.add_argument("--input", required=True, help="JSON con filas de agent_experiences")
+    p.add_argument("--out", default=str(Path(__file__).resolve().parent.parent))
+    p.add_argument("--force", action="store_true")
+    p.add_argument("--merge", action="store_true",
+                   help="suma al archivo las filas cuyo sid no esta; nunca pisa lo existente")
+    a = p.parse_args()
+
+    rows = json.loads(Path(a.input).read_text(encoding="utf-8-sig"))
+    if not isinstance(rows, list):
+        raise SystemExit("El input debe ser una lista de filas")
+
     out = Path(a.out)
     mem, idx = out / "memories.jsonl", out / "index.jsonl"
-    if not a.force and (mem.exists() or idx.exists()):
-        raise SystemExit("Ya existen los archivos; usa --force para sobrescribir")
+
+    if a.merge:
+        existentes = read_existing(mem)
+        sids = {r.get("sid") for r in existentes}
+        nuevos = [r for r in rows if stable_uuid(r.get("id")) not in sids]
+        records = existentes + build_records(nuevos, taken_ids=[r.get("id") for r in existentes])
+        records.sort(key=lambda x: (x["d"], x["k"], x["id"]))
+        omitidos = len(rows) - len(nuevos)
+    else:
+        records = build_records(rows)
+        omitidos = 0
+        if not a.force and (mem.exists() or idx.exists()):
+            raise SystemExit("Ya existen los archivos; usa --force para sobrescribir")
 
     def dump(path, items, keys):
         with path.open("w", encoding="utf-8", newline="\n") as f:
@@ -93,7 +126,11 @@ def main():
 
     dump(mem, records, KEYS)
     dump(idx, records, INDEX_KEYS)
-    print("OK memorias=%s indice=%s" % (len(records), len(records)))
+    if a.merge:
+        print("OK memorias=%s indice=%s nuevas=%s ya_estaban=%s"
+              % (len(records), len(records), len(nuevos), omitidos))
+    else:
+        print("OK memorias=%s indice=%s" % (len(records), len(records)))
 
 
 if __name__ == "__main__":
