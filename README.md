@@ -25,4 +25,6 @@ entorno `COQUITO_SUPABASE_KEY`.
 python tools/check.py --reindex              # regenera indice y valida
 powershell tools/mirror.ps1 -DryRun          # ve cuantas filas se espejearian
 powershell tools/mirror.ps1 -Only <id>       # espeja una experiencia
+powershell tools/import.ps1 -DryRun          # ve que filas faltan del archivo
+powershell tools/import.ps1                  # trae las que viven solo en Supabase
 ```

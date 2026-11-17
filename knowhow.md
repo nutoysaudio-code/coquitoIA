@@ -90,6 +90,8 @@ campos que el resultado real contradice.
 Una experiencia = un commit. No se guarda nada sin pasar por estos pasos.
 
 1. Buscar: `python tools/check.py` y leer `index.jsonl` por `d`, `k` o titulo.
+   Si la experiencia nacio en otro repo y solo esta en Supabase, traerla primero
+   con `powershell tools/import.ps1` (ver §9).
 2. Escribir o editar la linea en `memories.jsonl` con la convencion de arriba.
 3. Regenerar el indice y validar: `python tools/check.py --reindex` debe
    imprimir `OK`.
@@ -116,3 +118,20 @@ Una experiencia = un commit. No se guarda nada sin pasar por estos pasos.
 ```json
 {"id":"opencode/sin-secretos-en-opencode-json","sid":"11111111-1111-4111-8111-111111111111","k":"doctrine","d":"opencode","imp":10,"t":"Claves de proveedor en opencode.json: siempre {env:VAR}","s":"Una clave escrita en claro queda en el historial de sesiones aunque se borre el archivo; borrarla no la invalida.","sol":"1. Poner toda clave como {env:VAR}. 2. Definir la variable fuera del repo. 3. Si ya quedo en claro, rotarla.","less":"Rotar es la unica accion que invalida una clave expuesta: borrar archivos y backups no alcanza.","src":"C:\\Users\\quamagi\\.config\\opencode\\AGENTS.md","tags":["apikey","config","opencode","secretos"],"at":"2026-10-26"}
 ```
+
+## 9. Experiencias que nacen en otro repo
+
+Cuando una experiencia se guardo desde otro proyecto, quedo primero en
+Supabase. Traerla al archivo antes de commitear:
+
+```powershell
+powershell tools/import.ps1 -DryRun   # muestra las filas que faltan
+powershell tools/import.ps1           # las agrega y regenera el indice
+```
+
+`import.ps1` **solo suma** filas cuyo `sid` no esta en `memories.jsonl`: nunca
+pisa ni borra una linea existente. Si la fila ya esta, manda el archivo, aunque
+Supabase este mas atras. Requiere `COQUITO_SUPABASE_KEY`.
+
+Si el otro repo tiene git, esa experiencia viaja en el mismo commit que el
+trabajo que la produjo; si no, se commitea sola aca con el por que en el cuerpo.
