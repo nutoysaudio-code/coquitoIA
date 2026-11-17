@@ -5,7 +5,8 @@ escrito para ser leido por una IA, no por una persona: `index.jsonl` es el
 indice local y `memories.jsonl` el registro completo, un objeto JSON por linea.
 
 Formato: `coquito-ia/2`, definido en `FORMAT.md`.
-Contrato para agentes: `AGENTS.md` (se carga automaticamente al abrir el repo).
+Convencion obligatoria para escribir: `knowhow.md` (fuente unica).
+Aviso que se carga al abrir el repo: `AGENTS.md`.
 
 ## Donde vive cada cosa
 

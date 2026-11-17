@@ -3,6 +3,9 @@
 Formato de memoria legible por maquina. Version 2: agrega `sid` para espejar
 con Supabase. Sin contenido para personas.
 
+La convencion de redaccion, el flujo de trabajo y el checklist viven en
+`knowhow.md`, que es la unica fuente de verdad para eso.
+
 ## Arquitectura
 
 - `memories.jsonl`: archivo completo, fuente de verdad, una memoria por linea.
@@ -49,10 +52,3 @@ con Supabase. Sin contenido para personas.
 si no. No envia `created_at` en PATCH: Supabase conserva la fecha original.
 Requiere `COQUITO_SUPABASE_KEY`. No hay borrado automatico.
 
-## Cambios
-
-1. Buscar por `t` o `id`; editar la linea existente.
-2. Mantener `id` y `sid` aunque cambie `t`.
-3. `python tools/check.py --reindex`.
-4. `powershell tools/mirror.ps1 -Only <id>`.
-5. Commitear y pushear.
