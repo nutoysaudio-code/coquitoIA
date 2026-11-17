@@ -1,0 +1,2 @@
+# check.py exige LF y falla con CRLF: los .jsonl viajan con LF siempre.
+*.jsonl text eol=lf
