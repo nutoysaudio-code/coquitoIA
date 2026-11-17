@@ -1,34 +1,36 @@
 # coquitoIA — contrato para agentes
 
-Memoria de experiencia para modelos de IA. Texto machine-first: se consulta con
-`index.jsonl` y se lee por `id` en `memories.jsonl`. No es prosa para personas.
+Memoria de experiencias de trabajo. Texto machine-first: se consulta por indice
+y se lee por `id`. Supabase es la copia rapida; el archivo es la verdad.
 
-## Estado
+## Arquitectura (decidida 2026-11-17)
 
-- Fuente: snapshot unico de `public.agent_experiences` del 2026-11-17.
-- Este repo NO sincroniza con Supabase. No escribas en la base desde aca.
+- `memories.jsonl` guarda TODAS las experiencias y es la fuente de verdad.
+- Supabase `public.agent_experiences` es la copia caliente: se consulta primero
+  cuando hace falta velocidad.
+- El espejo solo da de alta y edita. Nunca borres filas en Supabase desde aca.
+- Sin credenciales en el repo. La clave publishable va en la variable de entorno
+  `COQUITO_SUPABASE_KEY` (valor en `C:\Users\quamagi\opencode-skills\ACCESO.md`).
 
 ## Leer
 
-1. `index.jsonl`: una linea por memoria con `id,k,d,imp,t`. Filtra por `d`
-   (dominio) o `k` (tipo) y ordena por `imp` descendente.
-2. Con el `id`, lee esa linea en `memories.jsonl`, que tiene
-   `id,k,d,imp,t,s,sol,less,src,tags,at`.
-3. Sentido: `s`=resumen, `sol`=solucion, `less`=leccion aprendida,
-   `src`=archivo de origen, `tags`=etiquetas, `at`=fecha.
+1. Rapido, si hay red: `select id,kind,domain,title,importance from
+   public.agent_experiences` filtrando por dominio/tipo.
+2. Completo, sin red: `index.jsonl` (`id,sid,k,d,imp,t`), filtrar y abrir solo
+   esa linea de `memories.jsonl`.
 
-## Escribir
+## Escribir: una experiencia = un commit
 
-- Busca primero por titulo o por `id`. Si existe, edita esa linea; no agregues
-  gemelas.
-- `id` estable: `<dominio>/<slug>`. No lo cambies aunque cambie el titulo.
-- Una linea JSON por memoria, claves en ese orden fijo. Campos vacios se omiten,
-  nunca `null`.
-- Ordena por `d,k,id`. `tags` unicos, en minusculas y ordenados. `imp` entre 1 y 10.
-- Regenera `index.jsonl` con solo `id,k,d,imp,t`.
-- Valida con `python tools/check.py`: debe imprimir `OK`. No commitees si falla.
-- Commits: asunto `Area: resumen` en espanol sin tildes; el cuerpo explica el
-  por que, no repite el diff. Un tema por commit.
-- Prohibido: secretos, claves, tokens y credenciales en URLs.
+1. Buscar por `t` o `id`. Si existe, editar esa linea; nunca agregar gemelas.
+2. `id` estable: `<dominio>/<slug>`, no cambia aunque cambie el titulo.
+   `sid` es el UUID de Supabase: inmutable; para entradas nuevas generar UUID v4.
+3. Claves en orden fijo: `id,sid,k,d,imp,t,s,sol,less,src,tags,at`. Vacio se
+   omite, nunca `null`. `imp` 1-10, `tags` minusculos unicos y ordenados.
+4. Regenerar el indice y validar: `python tools/check.py --reindex` debe imprimir
+   `OK`.
+5. Espejar: `powershell tools/mirror.ps1 -Only <id>` (o sin `-Only` para todo).
+6. Commitear los dos `.jsonl` juntos. Asunto `Area: resumen` en espanol sin
+   tildes; el cuerpo explica el por que. Push a `main`.
+7. Si el espejo falla, se commitea igual y se avisa: manda el archivo.
 
 Especificacion completa: `FORMAT.md`.

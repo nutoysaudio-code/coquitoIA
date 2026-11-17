@@ -1,16 +1,17 @@
-"""Importador unico del snapshot inicial a coquito-ia/1.
+"""Importador unico del snapshot inicial a coquito-ia/2.
 
 Uso: python tools/seed.py --input <dump.json> [--out <dir>] [--force]
-No sincroniza: solo convierte un dump de agent_experiences ya obtenido.
+No es sincronizacion: convierte un dump de agent_experiences ya obtenido.
 """
 import argparse
 import json
 import re
 import unicodedata
+import uuid
 from pathlib import Path
 
-KEYS = ("id", "k", "d", "imp", "t", "s", "sol", "less", "src", "tags", "at")
-INDEX_KEYS = ("id", "k", "d", "imp", "t")
+KEYS = ("id", "sid", "k", "d", "imp", "t", "s", "sol", "less", "src", "tags", "at")
+INDEX_KEYS = ("id", "sid", "k", "d", "imp", "t")
 KINDS = {"doctrine", "recipe", "experience", "reference"}
 
 
@@ -27,6 +28,13 @@ def flat(value):
     if value is None:
         return ""
     return re.sub(r"\s+", " ", str(value).replace("\r", " ").replace("\n", " ")).strip()
+
+
+def stable_uuid(value):
+    try:
+        return str(uuid.UUID(flat(value)))
+    except (ValueError, AttributeError, TypeError):
+        return str(uuid.uuid4())
 
 
 def main():
@@ -47,8 +55,7 @@ def main():
         k = flat(r.get("kind")) or "experience"
         if k not in KINDS:
             raise SystemExit("kind desconocido: " + k)
-        slug = ascii_slug(t)
-        base = d + "/" + slug
+        base = d + "/" + ascii_slug(t)
         rid, n = base, 2
         while rid in seen:
             rid, n = base + "-" + str(n), n + 1
@@ -61,7 +68,7 @@ def main():
         created = flat(r.get("created_at"))
         tags = sorted({ascii_slug(flat(x)) for x in (r.get("tags") or []) if flat(x)})
 
-        rec = {"id": rid, "k": k, "d": d, "imp": imp, "t": t}
+        rec = {"id": rid, "sid": stable_uuid(r.get("id")), "k": k, "d": d, "imp": imp, "t": t}
         for key, field in (("s", "summary"), ("sol", "solution"), ("less", "lessons_learned"), ("src", "source_path")):
             v = flat(r.get(field))
             if v:
